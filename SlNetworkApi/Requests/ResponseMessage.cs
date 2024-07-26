@@ -1,9 +1,11 @@
-﻿using CommonLib.Networking.Http.Transport.Messages.Interfaces;
+﻿using CommonLib.Networking.Interfaces;
 using CommonLib.Serialization;
+
+using System.IO;
 
 namespace SlNetworkApi.Requests
 {
-    public struct ResponseMessage : IHttpMessage
+    public struct ResponseMessage : INetworkMessage
     {
         public bool IsSuccess;
         public object Response;
@@ -12,18 +14,18 @@ namespace SlNetworkApi.Requests
         public ResponseMessage(string id, object msg, bool success)
             => (Id, Response, IsSuccess) = (id, msg, success);
 
-        public void Deserialize(Deserializer deserializer)
+        public void Read(BinaryReader reader)
         {
-            Id = deserializer.GetString();
-            IsSuccess = deserializer.GetBool();
-            Response = deserializer.GetObject();
+            Id = reader.ReadString();
+            IsSuccess = reader.ReadBoolean();
+            Response = reader.ReadObject();
         }
 
-        public void Serialize(Serializer serializer)
+        public void Write(BinaryWriter writer)
         {
-            serializer.Put(Id);
-            serializer.Put(IsSuccess);
-            serializer.PutObject(Response);
+            writer.Write(Id);
+            writer.Write(IsSuccess);
+            writer.WriteObject(Response);
         }
     }
 }

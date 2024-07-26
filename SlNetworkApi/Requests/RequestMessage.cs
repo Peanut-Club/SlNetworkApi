@@ -1,9 +1,11 @@
-﻿using CommonLib.Networking.Http.Transport.Messages.Interfaces;
+﻿using CommonLib.Networking.Interfaces;
 using CommonLib.Serialization;
+
+using System.IO;
 
 namespace SlNetworkApi.Requests
 {
-    public struct RequestMessage : IHttpMessage
+    public struct RequestMessage : INetworkMessage
     {
         public object Message;
         public string Id;
@@ -11,16 +13,16 @@ namespace SlNetworkApi.Requests
         public RequestMessage(string id, object msg)
             => (Id, Message) = (id, msg);
 
-        public void Deserialize(Deserializer deserializer)
+        public void Read(BinaryReader reader)
         {
-            Id = deserializer.GetString();
-            Message = deserializer.GetObject();
+            Id = reader.ReadString();
+            Message = reader.ReadObject();
         }
 
-        public void Serialize(Serializer serializer)
+        public void Write(BinaryWriter writer)
         {
-            serializer.Put(Id);
-            serializer.PutObject(Message);
+            writer.Write(Id);
+            writer.WriteObject(Message);
         }
     }
 }

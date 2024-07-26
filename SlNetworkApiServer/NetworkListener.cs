@@ -1,4 +1,4 @@
-﻿using CommonLib.Networking.Http.Transport.Messages.Interfaces;
+﻿using CommonLib.Networking.Interfaces;
 
 using SlNetworkApiServer.Servers;
 
@@ -11,8 +11,8 @@ namespace SlNetworkApiServer
     {
         private ScpServer _server;
 
-        private readonly Dictionary<Type, Func<IHttpMessage, IHttpMessage>> _returnListeners = new Dictionary<Type, Func<IHttpMessage, IHttpMessage>>();
-        private readonly Dictionary<Type, Action<IHttpMessage>> _staticListeners = new Dictionary<Type, Action<IHttpMessage>>();
+        private readonly Dictionary<Type, Func<INetworkMessage, INetworkMessage>> _returnListeners = new Dictionary<Type, Func<INetworkMessage, INetworkMessage>>();
+        private readonly Dictionary<Type, Action<INetworkMessage>> _staticListeners = new Dictionary<Type, Action<INetworkMessage>>();
 
         public NetworkListener(ScpServer server)
         {
@@ -37,13 +37,13 @@ namespace SlNetworkApiServer
             _staticListeners.Remove(type);
         }
 
-        public void Register<T>(Func<T, IHttpMessage> listener) where T : IHttpMessage
+        public void Register<T>(Func<T, INetworkMessage> listener) where T : INetworkMessage
             => Register(typeof(T), msg => listener?.Invoke((T)msg));
 
-        public void Register<T>(Action<T> listener) where T : IHttpMessage
+        public void Register<T>(Action<T> listener) where T : INetworkMessage
             => Register(typeof(T), msg => listener?.Invoke((T)msg));
 
-        public void Register(Type type, Func<IHttpMessage, IHttpMessage> listener)
+        public void Register(Type type, Func<INetworkMessage, INetworkMessage> listener)
         {
             if (type is null)
                 throw new ArgumentNullException(nameof(type));
@@ -54,7 +54,7 @@ namespace SlNetworkApiServer
             _returnListeners[type] = listener;
         }
 
-        public void Register(Type type, Action<IHttpMessage> listener)
+        public void Register(Type type, Action<INetworkMessage> listener)
         {
             if (type is null)
                 throw new ArgumentNullException(nameof(type));
@@ -65,7 +65,7 @@ namespace SlNetworkApiServer
             _staticListeners[type] = listener;
         }
 
-        private void OnMessage(IHttpMessage obj)
+        private void OnMessage(INetworkMessage obj)
         {
             var type = obj.GetType();
 

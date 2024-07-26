@@ -10,6 +10,10 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
+using SlNetworkApi.Modules;
+using SlNetworkApi.Requests;
+using SlNetworkApi.Server.Verification;
+
 namespace SlNetworkApiServer.Core
 {
     public static class Program
@@ -37,6 +41,9 @@ namespace SlNetworkApiServer.Core
                 Log = new LogOutput("Core");
                 Log.Setup();
 
+                if (ConsoleArgs.HasSwitch("DebugLogs"))
+                    LogOutput.EnableForAll(LogLevel.Debug);
+
                 Config = new ConfigFile($"{Directory.GetCurrentDirectory()}/config.ini");
 
                 Config.Serializer = value => value.JsonSerialize(true);
@@ -61,28 +68,7 @@ namespace SlNetworkApiServer.Core
                         var assemblyRaw = File.ReadAllBytes(file);
                         var assembly = Assembly.Load(assemblyRaw);
 
-                        if (assembly != null)
-                        {
-                            Assemblies.Add(assembly);
-
-                            foreach (var type in assembly.GetTypes())
-                            {
-                                foreach (var method in type.GetAllMethods())
-                                {
-                                    if (!method.IsStatic || method.Name != "InvokeServer" || method.Parameters().Length > 0)
-                                        continue;
-
-                                    try
-                                    {
-                                        method.Invoke(null, null);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Log.Error($"Failed to invoke invoke method '{method.ToName()}': {ex}");
-                                    }
-                                }
-                            }
-                        }
+                        assembly?.InvokeStaticMethods(m => m.Name == "InvokeOnServer");
                     }
                     catch (Exception ex)
                     {
@@ -90,6 +76,22 @@ namespace SlNetworkApiServer.Core
                     }
                 }
 
+                CommonLib.Serialization.Serialization.LoadSerializers();
+                CommonLib.Serialization.Deserialization.LoadDeserializers();
+
+                CommonLib.Serialization.Serialization.RegisterTypes(
+                    typeof(InvokeMethodMessage),
+                    typeof(InvokeMethodResult),
+
+                    typeof(SetPropertyMessage),
+
+                    typeof(RequestMessage),
+                    typeof(ResponseMessage),
+
+                    typeof(ServerVerificationRequestMessage),
+                    typeof(ServerVerificationResponseMessage));
+
+                NetworkManager.OnServerConnected += scp => scp.AddModule<TestModule>();
                 NetworkManager.Initialize(Address, Port, Delay);
             }
             catch (Exception ex)

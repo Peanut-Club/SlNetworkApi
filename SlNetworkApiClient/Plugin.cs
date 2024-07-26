@@ -1,14 +1,7 @@
-﻿using CommonLib;
-using CommonLib.Logging;
-
-using LabExtended.Core;
+﻿using PluginAPI.Enums;
 
 using PluginAPI.Core;
 using PluginAPI.Core.Attributes;
-
-using SlNetworkApiClient.Network;
-
-using System;
 
 namespace SlNetworkApiClient
 {
@@ -23,37 +16,12 @@ namespace SlNetworkApiClient
         public Config Instance;
 
         [PluginEntryPoint("SlNetworkApiClient", "1.0.0", "The client for the HTTP SCP SL API server.", "marchellcx")]
+        [PluginPriority(LoadPriority.Low)]
         public void Load()
         {
             Singleton = this;
             Config = Instance;
             Handler = PluginHandler.Get(this);
-
-            ExLoader.Info("SCP HTTP", $"Initializing client ..");
-
-            if (Config.ShowDebug)
-                LogOutput.DefaultLoggers.Add(new ScpLogger());
-
-            if (Config.ShowDebug)
-                CommonLibrary.Initialize(new string[] { "-DebugLogs" });
-            else
-                CommonLibrary.Initialize(Array.Empty<string>());
-
-            if (string.IsNullOrWhiteSpace(Config.Url))
-            {
-                ExLoader.Error("SCP HTTP", $"You need to set the server's URL.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(Config.Id))
-            {
-                ExLoader.Error("SCP HTTP", $"You need to set the server's ID.");
-                return;
-            }
-
-            ExLoader.Info("SCP HTTP", $"Connecting to &1{Config.Url}&r as &3{Config.Id}&r ..");
-
-            ScpClient.Initialize(Config.Url);
         }
     }
 }

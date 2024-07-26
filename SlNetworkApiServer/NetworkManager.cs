@@ -1,10 +1,10 @@
 ﻿using CommonLib.Extensions;
 using CommonLib.Logging;
+using CommonLib.Networking.Interfaces;
 using CommonLib.Networking.Http.Transport;
 using CommonLib.Networking.Http.Transport.Enums;
-using CommonLib.Networking.Http.Transport.Messages.Interfaces;
 
-using SlNetworkApi.Server;
+using SlNetworkApi.Server.Verification;
 using SlNetworkApiServer.Servers;
 
 using System;
@@ -38,23 +38,17 @@ namespace SlNetworkApiServer
 
             Log.Info($"Initializing server at {ip}:{port} ..");
 
-            if (Listener is null)
-            {
-                Listener = new HttpTransportServer();
+            Stop();
 
-                Listener.OnReady += OnReady;
-                Listener.OnMessage += OnMessage;
-                Listener.OnStopped += OnStopped;
-                Listener.OnConnected += OnConnected;
-                Listener.OnDisconnected += OnDisconnected;
+            Listener = new HttpTransportServer();
 
-                Log.Info("Listener instance created.");
-            }
-            else
-            {
-                Listener.Stop();
-                Servers.Clear();
-            }
+            Listener.OnReady += OnReady;
+            Listener.OnMessage += OnMessage;
+            Listener.OnStopped += OnStopped;
+            Listener.OnConnected += OnConnected;
+            Listener.OnDisconnected += OnDisconnected;
+
+            Log.Info("Listener instance created.");
 
             if (disconnectDelay.HasValue)
                 Listener.DisconnectDelay = disconnectDelay.Value;
@@ -96,27 +90,14 @@ namespace SlNetworkApiServer
             if (obj is null)
                 return;
 
+            if (Servers.ContainsKey(obj.Token))
+                return;
+
             var server = new ScpServer(obj.Token, obj);
 
             Servers[server.Token] = server;
 
-            Task.Run(async () =>
-            {
-                await Task.Delay(250);
-
-                Log.Debug($"Requesting ServerVerification");
-
-                server.Requests.Get<ServerVerificationMessage>(new ServerVerificationRequest(obj.Token), msg =>
-                {
-                    server.Id = msg.Id;
-                    server.Name = msg.Name;
-                    server.Port = msg.Port;
-
-                    OnServerConnected?.Invoke(server);
-
-                    Log.Info($"Server connected: {server.Name} ({server.Id} - {server.Port})");
-                });
-            });
+            server.Send(new ServerVerificationRequestMessage(obj.Token));
 
             Log.Info($"Peer connected: {obj.Token} ({obj.RemoteIp})");
         }
@@ -138,7 +119,7 @@ namespace SlNetworkApiServer
             Log.Warn($"Server {arg1.Token} ({arg1.RemoteIp}) has disconnected: {arg2}");
         }
 
-        private static void OnMessage(HttpTransportPeer arg1, IHttpMessage arg2)
+        private static void OnMessage(HttpTransportPeer arg1, INetworkMessage arg2)
         {
             Log.Debug($"OnMessage {arg1?.Token ?? "null"} {arg2?.GetType().FullName ?? "null"}");
 
@@ -154,6 +135,12 @@ namespace SlNetworkApiServer
             server.InternalHandleMessage(arg2);
 
             Log.Info($"Received message from server ({arg1.Token} - {arg1.RemoteIp}): {arg2.GetType().FullName}");
+        }
+
+        internal static void VerifyServer(ScpServer server)
+        {
+            OnServerConnected?.Invoke(server);
+            Log.Info($"Server connected: {server.Name} ({server.Id} - {server.Port})");
         }
 
         private static void OnReady()

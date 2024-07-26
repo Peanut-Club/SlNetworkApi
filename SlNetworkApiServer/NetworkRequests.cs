@@ -2,7 +2,7 @@
 using CommonLib.Logging;
 using CommonLib.Extensions;
 using CommonLib.Utilities.Generation;
-using CommonLib.Networking.Http.Transport.Messages.Interfaces;
+using CommonLib.Networking.Interfaces;
 using CommonLib.Networking.Http.Transport.Enums;
 
 using SlNetworkApiServer.Servers;
@@ -56,7 +56,7 @@ namespace SlNetworkApiServer
                 await Task.Delay(50);
             }
 
-            if (!message.IsSuccess)
+            if (!message.IsSuccess && throwOnFailed)
                 throw new Exception($"Request {message.Id} has failed");
 
             if (message.Response is null)
@@ -115,6 +115,8 @@ namespace SlNetworkApiServer
 
             _responseHandlers[id] = response;
             _server.Send(new RequestMessage(id, request));
+
+            Log.Debug($"Sent request ID={id} Type={request.GetType().FullName}");
         }
 
         public void Unregister<T>()
@@ -172,8 +174,19 @@ namespace SlNetworkApiServer
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(requestMessage.Id) || requestMessage.Message is null)
+                Log.Debug($"Processing request: {requestMessage.Id ?? "null"} | {requestMessage.Message?.GetType().FullName ?? "null"}");
+
+                if (string.IsNullOrWhiteSpace(requestMessage.Id))
+                {
+                    Log.Warn($"Received a request with a null ID");
                     return;
+                }
+
+                if (requestMessage.Message is null)
+                {
+                    Log.Warn($"Received a request with a null message");
+                    return;
+                }
 
                 var type = requestMessage.Message.GetType();
 
@@ -197,11 +210,19 @@ namespace SlNetworkApiServer
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(responseMessage.Id) || responseMessage.Response is null)
+                Log.Debug($"Processing response: {responseMessage.Id ?? "null"} | {responseMessage.Response?.GetType().FullName ?? "null"}");
+
+                if (string.IsNullOrWhiteSpace(responseMessage.Id))
+                {
+                    Log.Warn($"Received a response with a null ID");
                     return;
+                }
 
                 if (!_responseHandlers.TryGetValue(responseMessage.Id, out var handler))
+                {
+                    Log.Warn($"Received a response with an unknown ID: {responseMessage.Id}");
                     return;
+                }
 
                 _responseHandlers.Remove(responseMessage.Id);
 
@@ -213,7 +234,7 @@ namespace SlNetworkApiServer
             }
         }
 
-        private void OnMessage(IHttpMessage obj)
+        private void OnMessage(INetworkMessage obj)
         {
             if (obj is RequestMessage requestMessage)
                 InternalHandleRequest(requestMessage);

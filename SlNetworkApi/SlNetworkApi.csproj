@@ -45,11 +45,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Modules\InvokeMethodMessage.cs" />
+    <Compile Include="Modules\InvokeMethodResult.cs" />
+    <Compile Include="Modules\SetPropertyMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Requests\RequestMessage.cs" />
     <Compile Include="Requests\ResponseMessage.cs" />
-    <Compile Include="Server\ServerVerificationMessage.cs" />
-    <Compile Include="Server\ServerVerificationRequest.cs" />
+    <Compile Include="Server\Verification\ServerVerificationResponseMessage.cs" />
+    <Compile Include="Server\Verification\ServerVerificationRequestMessage.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

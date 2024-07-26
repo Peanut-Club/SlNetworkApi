@@ -4,9 +4,6 @@ namespace SlNetworkApiClient
 {
     public class Config
     {
-        [Description("Whether or not to reconnect the client if it disconnects from the server.")]
-        public bool ReconnectClient { get; set; } = true;
-
         [Description("Whether or not to show debug messages.")]
         public bool ShowDebug { get; set; }
 

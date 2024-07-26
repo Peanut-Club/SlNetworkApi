@@ -1,4 +1,8 @@
-﻿using CommonLib.Networking.Http.Transport.Messages.Interfaces;
+﻿using CommonLib.Networking.Interfaces;
+
+using LabExtended.Attributes;
+
+using SlNetworkApiClient.Events;
 
 using System;
 using System.Collections.Generic;
@@ -7,11 +11,8 @@ namespace SlNetworkApiClient.Network
 {
     public static class ScpListener
     {
-        private static readonly Dictionary<Type, Func<IHttpMessage, IHttpMessage>> _returnListeners = new Dictionary<Type, Func<IHttpMessage, IHttpMessage>>();
-        private static readonly Dictionary<Type, Action<IHttpMessage>> _staticListeners = new Dictionary<Type, Action<IHttpMessage>>();
-
-        static ScpListener()
-            => ScpClient.OnServerConnected += OnConnected;
+        private static readonly Dictionary<Type, Func<INetworkMessage, INetworkMessage>> _returnListeners = new Dictionary<Type, Func<INetworkMessage, INetworkMessage>>();
+        private static readonly Dictionary<Type, Action<INetworkMessage>> _staticListeners = new Dictionary<Type, Action<INetworkMessage>>();
 
         public static void Unregister<T>()
             => Unregister(typeof(T));
@@ -25,13 +26,13 @@ namespace SlNetworkApiClient.Network
             _staticListeners.Remove(type);
         }
 
-        public static void Register<T>(Func<T, IHttpMessage> listener) where T : IHttpMessage
+        public static void Register<T>(Func<T, INetworkMessage> listener) where T : INetworkMessage
             => Register(typeof(T), msg => listener?.Invoke((T)msg));
 
-        public static void Register<T>(Action<T> listener) where T : IHttpMessage
+        public static void Register<T>(Action<T> listener) where T : INetworkMessage
             => Register(typeof(T), msg => listener?.Invoke((T)msg));
 
-        public static void Register(Type type, Func<IHttpMessage, IHttpMessage> listener)
+        public static void Register(Type type, Func<INetworkMessage, INetworkMessage> listener)
         {
             if (type is null)
                 throw new ArgumentNullException(nameof(type));
@@ -42,7 +43,7 @@ namespace SlNetworkApiClient.Network
             _returnListeners[type] = listener;
         }
 
-        public static void Register(Type type, Action<IHttpMessage> listener)
+        public static void Register(Type type, Action<INetworkMessage> listener)
         {
             if (type is null)
                 throw new ArgumentNullException(nameof(type));
@@ -53,8 +54,10 @@ namespace SlNetworkApiClient.Network
             _staticListeners[type] = listener;
         }
 
-        private static void OnMessage(IHttpMessage obj)
+        [HookDescriptor]
+        private static void OnMessage(ClientMessageArgs args)
         {
+            var obj = args.Message;
             var type = obj.GetType();
 
             if (_returnListeners.TryGetValue(type, out var listener))
@@ -69,22 +72,18 @@ namespace SlNetworkApiClient.Network
                 staticListener?.Invoke(obj);
         }
 
-        internal static void OnConnected()
+        [HookDescriptor]
+        internal static void OnConnected(ClientConnectedArgs _)
         {
             _staticListeners.Clear();
             _returnListeners.Clear();
-
-            ScpClient.OnServerDisconnected += OnDisconnected;
-            ScpClient.OnServerMessage += OnMessage;
         }
 
-        private static void OnDisconnected()
+        [HookDescriptor]
+        internal static void OnDisconnected(ClientDisconnectedArgs _)
         {
             _staticListeners.Clear();
             _returnListeners.Clear();
-
-            ScpClient.OnServerDisconnected -= OnDisconnected;
-            ScpClient.OnServerMessage -= OnMessage;
         }
     }
 }

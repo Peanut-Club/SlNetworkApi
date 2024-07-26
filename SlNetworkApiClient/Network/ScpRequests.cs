@@ -1,14 +1,14 @@
 ﻿using CommonLib.Caching;
 using CommonLib.Utilities.Generation;
 
-using CommonLib.Networking.Http.Transport.Messages.Interfaces;
-
 using SlNetworkApi.Requests;
+using SlNetworkApiClient.Events;
 
 using System;
 using System.Collections.Generic;
 
 using LabExtended.Core;
+using LabExtended.Attributes;
 
 namespace SlNetworkApiClient.Network
 {
@@ -139,20 +139,19 @@ namespace SlNetworkApiClient.Network
             }
         }
 
-        internal static void OnConnected()
+        [HookDescriptor]
+        private static void OnConnected(ClientConnectedArgs _)
         {
             _responseHandlers.Clear();
             _requestHandlers.Clear();
 
             _id.FreeAll();
-
-            ScpClient.OnServerDisconnected += OnDisconnected;
-            ScpClient.OnServerMessage += OnMessage;
         }
 
-        private static void OnMessage(IHttpMessage obj)
+        [HookDescriptor]
+        private static void OnMessage(ClientMessageArgs args)
         {
-            ExLoader.Info("SCP Requests", $"Received message: {obj.GetType().FullName}");
+            var obj = args.Message;
 
             if (obj is RequestMessage requestMessage)
                 InternalHandleRequest(requestMessage);
@@ -160,17 +159,13 @@ namespace SlNetworkApiClient.Network
                 InternalHandleResponse(responseMessage);
         }
 
-        private static void OnDisconnected()
+        [HookDescriptor]
+        private static void OnDisconnected(ClientDisconnectedArgs _)
         {
-            ExLoader.Info("SCP Requests", $"Server disconnected!");
-
             _responseHandlers.Clear();
             _requestHandlers.Clear();
 
             _id.FreeAll();
-
-            ScpClient.OnServerDisconnected -= OnDisconnected;
-            ScpClient.OnServerMessage -= OnMessage;
         }
     }
 }
